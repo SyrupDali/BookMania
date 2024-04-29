@@ -1,3 +1,6 @@
+# Description
+This project was done by a group of six people, we developed an online book reading application, which focused on back-end logic implementation. The application allows different roles of users to post or manage the books, mark their reading status of books and share them with their friends, and search books and then add them to their lists. Used Spring Framework in Java, REST for server interactions, and Mockito for integration testing. During the development, we used Postman to test the endpoints. 
+
 # Lab Template
 
 This template contains two microservices:

@@ -1,0 +1,2219 @@
+openapi: 3.0.3
+info:
+  title: Bookshelf Microservice (Team 18a)
+  version: 1.0.0
+servers:
+  - url: 'http://localhost:8080/bookshelf_service'
+    description: Local server for team 18a
+
+tags:
+  - name: catalog
+    description: Actions related to the catalog of all books
+  - name: bookshelf
+    description: Actions related to the bookshelf
+  - name: circle
+    description: Actions related to a bookshelf's circle
+  - name: user
+    description: Actions the user can do
+
+paths:
+
+  ## HERE STARTS CATALOG
+  /catalog:
+    get:
+      tags:
+        - catalog
+      summary: Get all the books
+      description: Returns a list of all the available books a user can access
+      responses:
+        '200':
+          description: OK. Books returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Array of books.
+                items:
+                  $ref: '#/components/schemas/Book'
+        '204':
+          description: No books in the catalog.
+        '500':
+          description: Internal server error.
+
+    post:
+      tags:
+        - catalog
+      summary: Create a new book.
+      description: Create a book to keep in the catalog.
+      requestBody:
+        description: Book object that needs to be added to the catalog.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Book"
+      responses:
+        '200':
+          description: Successful response.
+        '400':
+          description: Invalid request.
+        '500':
+          description: Internal server error.
+
+    put:
+      tags:
+        - catalog
+      summary: Edit a book.
+      description: Edit a book from the catalog.
+      requestBody:
+        description: Book object that needs to be edited.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Book"
+      responses:
+        '200':
+          description: Successful response.
+        '400':
+          description: Invalid request.
+        '404':
+          description: Book not found.
+        '500':
+          description: Internal server error.
+
+    delete:
+      tags:
+        - catalog
+      summary: Deletes a book.
+      description: Deletes the specified book from the catalog and all bookshelves.
+      parameters:
+        - name: bookId
+          in: query
+          required: true
+          description: ID of the book that needs to be deleted.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Successful deletion.
+        '400':
+          description: Invalid request.
+        '404':
+          description: Book not found.
+        '500':
+          description: Internal server error.
+
+  /catalog/{bookId}:
+    get:
+      tags:
+        - catalog
+      summary: Get details about book
+      description: Returns all the details about a specific book.
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: The ID of the book we are looking for.
+          example: "b123e456-7890-1234-5678-9abcdef01234"
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK. Book returned.
+          content:
+            application/json:
+              schema:
+                description: The book object of the book id.
+                items:
+                  $ref: '#/components/schemas/Book'
+        '400':
+          description: Bad request.
+        '404':
+          description: Book with specified ID not found.
+        '500':
+          description: Internal server error.
+
+  /catalog/search:
+    get:
+      tags:
+        - catalog
+      summary: Get details about book
+      description: Returns all the details about a specific book.
+      parameters:
+        - name: title
+          in: query
+          required: false
+          description: The title of the book we are searching for
+          schema:
+            type: string
+            example: "The Lord of the Rings"
+        - name: author
+          in: query
+          required: false
+          description: The author of the book we are searching for
+          schema:
+            type: string
+            example: "J.R.R. Tolkien"
+      responses:
+        '200':
+          description: OK. Book(s) returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+        '204':
+          description: No matching books found.
+        '500':
+          description: Internal server error.
+
+  /catalog/{bookId}/share:
+    get:
+      tags:
+        - catalog
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          description: ID of the book that needs to be shared.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: string
+                format: url
+                example: "http://localhost:8081/a/catalog/b123e456-7890-1234-5678-9abcdef01234"
+        '400':
+          description: Invalid request.
+        '404':
+          description: Book not found.
+        '500':
+          description: Internal server error.
+
+  ## HERE STARTS BOOKSHELF
+  /bookshelf:
+    get:
+      tags:
+        - bookshelf
+      summary: Get all the bookshelves in the database.
+      description: Returns all the bookshelves in the database.
+      responses:
+        '200':
+          description: OK. Bookshelves returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bookshelf'
+        '204':
+          description: No bookshelves currently in the database.
+        '500':
+          description: Internal server error.
+
+    post:
+      tags:
+        - bookshelf
+      summary: Create a new bookshelf.
+      description: Create a new bookshelf owned by the specified user. All bookshelves are initially empty, as well as its circle, thus no parameters for those.
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to create a bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      requestBody:
+        required: true
+        description: The new information required for a bookshelf.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: The title of the bookshelf
+                  example: My Bookshelf
+                description:
+                  type: string
+                  description: A brief description of the bookshelf
+                  example: A bookshelf for all my favorite books
+                privacy:
+                  type: string
+                  enum:
+                    - PUBLIC
+                    - PRIVATE
+      responses:
+        '200':
+          description: Bookshelf has been created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad request.
+        '404':
+          description: User with specified ID not found.
+        '500':
+          description: Internal server error.
+
+
+  /bookshelf/get_public:
+    get:
+      tags:
+        - bookshelf
+      summary: Gets all the public bookshelves.
+      description: Return a list of all the public bookshelves, which all users can see.
+      responses:
+        '200':
+          description: OK. Public bookshelves returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bookshelf'
+        '204':
+          description: No publicly available bookshelves in the database.
+        '500':
+          description: Internal server error.
+
+
+  /bookshelf/{bookshelfId}:
+    get:
+      tags:
+        - bookshelf
+      summary: Get details about a bookshelf.
+      description: Returns all the details about a specific bookshelf (e.g. name, description, etc).
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf we are looking for.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: OK. Bookshelf returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad request.
+        '404':
+          description: Bookshelf with specified ID not found.
+        '500':
+          description: Internal server error.
+
+    delete:
+      tags:
+        - bookshelf
+      summary: Delete an existing bookshelf from the library.
+      description: Remove a bookshelf from the database.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being deleted.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to delete this bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: OK. Delete successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad request.
+        '403':
+          description: Unauthorized. User not allowed to delete this bookshelf.
+        '404':
+          description: User/Bookshelf with specified ID not found.
+        '500':
+          description: Internal server error.
+
+    put:
+      tags:
+        - bookshelf
+      summary: Edit a bookshelf.
+      description: Edit an existing bookshelf from the library by submitting all fields again.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to edit this bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: The title of the bookshelf
+                  example: My Bookshelf
+                description:
+                  type: string
+                  description: A brief description of the bookshelf.
+                  example: A bookshelf for all my favorite books
+                privacy:
+                  type: string
+                  enum:
+                    - PUBLIC
+                    - PRIVATE
+                  description: The privacy of the bookshelf.
+                  example: PUBLIC
+
+      responses:
+        '200':
+          description: OK. Bookshelf details updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to modify this bookshelf.
+        '404':
+          description: Bookshelf with specified ID not found.
+        '500':
+          description: Internal server error.
+
+
+  /bookshelf/{bookshelfId}/edit/title:
+    put:
+      tags:
+        - bookshelf
+      summary: Edit the title of a bookshelf
+      description: Edit only the title of an existing bookshelf.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to edit the title of this bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      requestBody:
+        required: true
+        description: The new title for the bookshelf.
+        content:
+          application/json:
+            schema:
+              type: string
+              example: My Amazing Bookshelf
+      responses:
+        '200':
+          description: OK. Bookshelf details updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to modify this bookshelf.
+        '404':
+          description: Bookshelf with specified ID not found.
+        '500':
+          description: Internal server error.
+
+
+  /bookshelf/{bookshelfId}/edit/description:
+    put:
+      tags:
+        - bookshelf
+      summary: Edit the description of a bookshelf
+      description: Edit only the description of an existing bookshelf.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to edit the description of this bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      requestBody:
+        required: true
+        description: The new description for the bookshelf.
+        content:
+          application/json:
+            schema:
+              type: string
+              example: This bookshelf is dedicated to some really amazing books
+      responses:
+        '200':
+          description: OK. Bookshelf details updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to modify this bookshelf.
+        '404':
+          description: Bookshelf with specified ID not found.
+        '500':
+          description: Internal server error.
+
+
+  /bookshelf/{bookshelfId}/edit/privacy:
+    put:
+      tags:
+        - bookshelf
+      summary: Edit the visibility of a bookshelf
+      description: Edit only the visibility setting (Public, Private) of an existing bookshelf.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to edit the visibility setting of this bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      requestBody:
+        required: true
+        description: One value between PUBLIC or PRIVATE
+        content:
+          application/json:
+            schema:
+              type: string
+              enum:
+                - PUBLIC
+                - PRIVATE
+      responses:
+        '200':
+          description: OK. Bookshelf details updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to modify this bookshelf.
+        '404':
+          description: Bookshelf with specified ID not found.
+        '500':
+          description: Internal server error.
+
+
+  /bookshelf/{bookshelfId}/edit/category:
+    put:
+      tags:
+        - bookshelf
+      summary: Edit the category of a bookshelf
+      description: Edit only the category of an existing bookshelf. The category can vary per user
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to edit the category of this bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              format: uuid
+      responses:
+        '200':
+          description: OK. Bookshelf details updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to modify this bookshelf.
+        '404':
+          description: Bookshelf with specified ID not found.
+        '500':
+          description: Internal server error.
+
+    delete:
+      tags:
+        - bookshelf
+      summary: Delete the category of a bookshelf
+      description: Remove only the category attribute of an existing bookshelf. The category can vary per user.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to remove the category of this bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+      responses:
+        '200':
+          description: OK. Bookshelf details updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to delete this bookshelf.
+        '404':
+          description: Bookshelf/user with specified ID not found.
+        '500':
+          description: Internal server error.
+
+
+  /bookshelf/{bookshelfId}/book:
+    put:
+      tags:
+        - bookshelf
+      summary: Add a book to the bookshelf.
+      description: Add a book to the bookshelf.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to add a book to this bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: bookId
+          in: query
+          required: true
+          description: The ID of the book that is being added to the bookshelf.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK. Book has been added to the bookshelf.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to modify this bookshelf.
+        '404':
+          description: User/Bookshelf with specified ID not found.
+        '500':
+          description: Internal server error.
+
+    delete:
+      tags:
+        - bookshelf
+      summary: Deletes a book from the bookshelf.
+      description: deletes a book from the bookshelf.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to add a delete a book from the bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: bookId
+          in: query
+          required: true
+          description: The ID of the book that is being deleted from the bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+      responses:
+        '200':
+          description: OK. Book has been removed from the bookshelf.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookshelf'
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to modify this bookshelf.
+        '404':
+          description: Bookshelf with specified ID not found.
+        '500':
+          description: Internal server error.
+
+
+  /bookshelf/{bookshelfId}/{userId}/book/add_multiple:
+    put:
+      tags:
+        - bookshelf
+      summary: Add multiple books to the bookshelf
+      description: Take a list of book ids and adds them to the bookshelf's book list
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+      requestBody:
+        description: list of book ids
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: uuid
+        required: true
+      responses:
+        '200':
+          description: Books added to bookshelf successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                description: array of books just added
+                items:
+                  $ref: '#/components/schemas/Book'
+        '400':
+          description: Invalid book id
+        '403':
+          description: User does not have access to add book to bookshelf
+        '404':
+          description: Bookshelf user or book not found
+        '409':
+          description: Book already exists in the bookshelf
+        '500':
+          description: Internal server error
+
+
+  /bookshelf/{bookshelfId}/{userId}/book/delete_multiple:
+    put:
+      tags:
+        - bookshelf
+      summary: Delete multiple books from the bookshelf
+      description: Take a list of book ids and deletes them from the bookshelf's book list
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+      requestBody:
+        description: list of book ids
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: uuid
+        required: true
+      responses:
+        '200':
+          description: Deleted books from bookshelf successfully
+        '400':
+          description: Invalid book id
+        '403':
+          description: User does not have access to delete book from bookshelf
+        '404':
+          description: User or bookshelf not found
+        '409':
+          description: Book does not exist in the bookshelf
+        '500':
+          description: Internal server error
+
+
+  /bookshelf/{bookshelfId}/circle/request:
+    post:
+      tags:
+        - circle
+      summary: Request to join a bookshelf
+      description: Take a user id and adds it to the bookshelf's pending members list
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: userId
+          in: query
+          required: true
+          description: ID of the user requesting to join
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Request to join bookshelf sent successfully
+        '400':
+          description: Invalid user or bookshelf id
+        '404':
+          description: User or bookshelf not found
+        '409':
+          description: User already exists in the pending members list or is already a member
+        '500':
+          description: Internal server error
+
+
+
+
+  /bookshelf/{bookshelfId}/circle/pending:
+    get:
+      tags:
+        - circle
+      summary: get the pending members of a bookshelf if owner id matches
+      description: Returns an array of all the pending user id's of a bookshelf
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: userId
+          in: query
+          required: true
+          description: ID of the owner of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Users in pending requests returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Array of user id's that are pending for the circle.
+                items:
+                  type: string
+                  format: uuid
+                  description: The unique identifier of the user
+                  example: "b123e456-7890-1234-5678-9abcdef01234"
+        '400':
+          description: Invalid bookshelf id
+        '403':
+          description: User is not the owner of the bookshelf
+        '404':
+          description: Bookshelf not found
+        '500':
+          description: Internal server error
+
+
+  /bookshelf/{bookshelfId}/circle/pending/accept:
+    post:
+      tags:
+        - circle
+      summary: Add a member from the pending list to the bookshelf if owner id matches and remove from the list
+      description: Take a user id and adds it to the bookshelf's members list, removes from pending members list
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: owner_id
+          in: query
+          required: true
+          description: ID of the owner of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      requestBody:
+        description: user id
+        content:
+          application/json:
+            schema:
+              type: string
+              format: uuid
+              example: "b123e456-7890-1234-5678-9abcdef01234"
+        required: true
+      responses:
+        '200':
+          description: User added to the circle successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                description: array of user ids in the circle
+                items:
+                  type: string
+                  format: uuid
+                  example: "b123e456-7890-1234-5678-9abcdef01234"
+        '400':
+          description: Invalid user or bookshelf id
+        '403':
+          description: User is not the owner of the bookshelf
+        '404':
+          description: User or bookshelf not found
+        '409':
+          description: User already exists in the members list
+        '500':
+          description: Internal server error
+
+
+  /bookshelf/{bookshelfId}/circle/pending/reject:
+    put:
+      tags:
+        - circle
+      summary: Delete a member from the pending list if exists when owner id matches
+      description: Reject a user from joining the bookshelf by removing them from the pending members list
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: owner_id
+          in: query
+          required: true
+          description: ID of the owner of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      requestBody:
+        description: user id to delete
+        content:
+          application/json:
+            schema:
+              type: string
+              format: uuid
+              example: "b123e456-7890-1234-5678-9abcdef01234"
+        required: true
+      responses:
+        '200':
+          description: Rejected user from pending members list successfully
+        '400':
+          description: Invalid user or bookshelf id
+        '403':
+          description: User is not the owner of the bookshelf
+        '404':
+          description: User or bookshelf not found
+        '409':
+          description: User does not exist in the members list
+        '500':
+          description: Internal server error
+
+  /bookshelf/{bookshelfId}/circle/insights/books_read:
+    get:
+      tags:
+        - circle
+      summary: Get the number of books read for the circle.
+      description: Returns the number of books that have been marked as read for the circle. This is the sum of all the read books by the users of this circle.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                description: The number of books read by the circle.
+                type: integer
+                example: 40
+        '400':
+          description: Invalid request.
+        '404':
+          description: Bookshelf not found.
+        '500':
+          description: Server error.
+
+  /bookshelf/{bookshelfId}/circle/insights/preferred_genres:
+    get:
+      tags:
+        - circle
+      summary: Get the preferred genres for the circle.
+      description: Returns an array with the top 3 preferred genres for the circle.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Array of names for the top 3 genres for the circle.
+                items:
+                  type: string
+                example: [ "Fantasy", "Horror", "Romance" ]
+        '400':
+          description: Invalid request.
+        '404':
+          description: Bookshelf not found.
+        '500':
+          description: Server error.
+
+  /bookshelf/{bookshelfId}/{userId}/book/tag:
+    put:
+      tags:
+        - bookshelf
+      summary: Adds a tag to the book.
+      description: Adds a tag to the specified book.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: tag_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+      responses:
+        '200':
+          description: Successful request.
+          content:
+            application/json:
+              schema:
+                description: Tags now present on the book.
+                type: array
+                items:
+                  $ref: "#/components/schemas/BookTag"
+        '400':
+          description: Bad request.
+        '404':
+          description: Book not found.
+        '500':
+          description: Internal server error.
+
+    delete:
+      tags:
+        - bookshelf
+      summary: Deletes a tag from the book.
+      description: Deletes a tag from the specified book.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user.
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+        - name: tag_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa8"
+      responses:
+        '200':
+          description: Successful request.
+          content:
+            application/json:
+              schema:
+                description: Array of tags still present for the book.
+                type: array
+                items:
+                  $ref: "#/components/schemas/BookTag"
+        '400':
+          description: Bad request.
+        '404':
+          description: Book not found.
+        '500':
+          description: Internal server error.
+
+
+  ## HERE STARTS CIRCLE
+  /bookshelf/{bookshelfId}/circle:
+    get:
+      tags:
+        - circle
+      summary: get the members of a bookshelf
+      description: Returns an array of all the user id's of a bookshelf
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Members of bookshelf returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+                  description: The unique identifier of the user
+                  example: "b123e456-7890-1234-5678-9abcdef01234"
+        '400':
+          description: Invalid bookshelf id
+        '404':
+          description: Bookshelf not found
+        '500':
+          description: Internal server error
+
+    put:
+      tags:
+        - circle
+      summary: Add a user to the bookshelf's circle.
+      description: Add a user to a specific bookshelf's circle. This action can only be done by the owner of the bookshelf.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying to add a member to this bookshelf's circle.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: memberId
+          in: query
+          required: true
+          description: The ID of the user who is being added to this bookshelf's circle.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: OK. User added.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookshelfId:
+                    type: string
+                    format: uuid
+                    description: The ID of the bookshelf whose circle has been edited.
+                    example: "b123e456-7890-1234-5678-9abcdef01234"
+                  userIds:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                      description: The ID's of the circle's members.
+                      example: "b123e456-7890-1234-5678-9abcdef01235"
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to modify this bookshelf's circle.
+        '404':
+          description: User(s) with specified ID not found.
+        '500':
+          description: Internal server error.
+
+    delete:
+      tags:
+        - circle
+      summary: Remove a user from a bookshelf's circle.
+      description: Remove a user from a specific bookshelf's circle. This action can only be done by the owner of the bookshelf.
+      parameters:
+        - name: bookshelfId
+          in: path
+          required: true
+          description: The ID of the bookshelf that is being edited.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: userId
+          in: query
+          required: true
+          description: The ID of the user who is trying remove a member from this bookshelf's circle.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: memberId
+          in: query
+          required: true
+          description: The ID of the user who is being removed from this bookshelf's circle.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: OK. User removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookshelfId:
+                    type: string
+                    format: uuid
+                    description: The ID of the bookshelf whose circle has been edited.
+                    example: "b123e456-7890-1234-5678-9abcdef01234"
+                  userIds:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                      description: The ID's of the circle's members.
+                      example: "b123e456-7890-1234-5678-9abcdef01234"
+        '400':
+          description: Bad Request.
+        '401':
+          description: Unauthorized. User not allowed to modify this bookshelf's circle.
+        '404':
+          description: User(s) with specified ID not found.
+        '500':
+          description: Internal server error.
+
+  ## HERE STARTS USER
+  /user/{userId}/bookshelves:
+    get:
+      tags:
+        - user
+      summary: Return all the bookshelves that the user created.
+      description: Returns a list of bookshelves that the specified user owns (has created).
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user whose bookshelves we are looking for.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: OK. User's bookshelves returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bookshelf'
+        '204':
+          description: User has not created any bookshelves.
+        '400':
+          description: Bad request.
+        '404':
+          description: User not found.
+        '500':
+          description: Internal server error.
+
+
+  /user/{userId}/categories:
+    get:
+      tags:
+        - user
+      summary: Return all the bookshelf categories that the user created.
+      description: Returns a list of categories representing the bookshelves that the specified user owns (has created).
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user whose categories we are looking for.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: OK. User's categories returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '204':
+          description: User has not created any categories.
+        '400':
+          description: Bad request.
+        '404':
+          description: User not found.
+        '500':
+          description: Internal server error.
+
+    post:
+      tags:
+        - user
+      summary: Create a new category.
+      description: Creates a new category item which the specified used can add to their bookshelves.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user who is creating a category.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      requestBody:
+        required: true
+        description: The new information required for a category.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: The name of the category.
+                  example: My Bookshelf
+                description:
+                  type: string
+                  description: A brief description of the category.
+                  example: A bookshelf for all my favorite books
+      responses:
+        '200':
+          description: OK. Category created.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '400':
+          description: Bad request.
+        '404':
+          description: User not found.
+        '500':
+          description: Internal server error.
+
+    delete:
+      tags:
+        - user
+      summary: Delete a category.
+      description: Delete a category that a user has created.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user whose categories we are looking for.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: categoryId
+          in: query
+          required: true
+          description: The ID of the category we are trying to delete.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01235"
+      responses:
+        '200':
+          description: OK. Category deleted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '400':
+          description: Bad request.
+        '404':
+          description: User/category not found.
+        '500':
+          description: Internal server error.
+
+
+  /user/{userId}/books/{bookId}/status:
+    get:
+      tags:
+        - user
+      summary: Get the status of a book
+      description: Returns the status of a book
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: bookId
+          in: path
+          required: true
+          description: ID of the book
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01235"
+      responses:
+        '200':
+          description: Status of book returned successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                enum:
+                  - READING
+                  - READ
+                  - WANT-TO-READ
+        '400':
+          description: Invalid user, bookshelf, or book id
+        '403':
+          description: User does not have access to get status of book
+        '404':
+          description: User, bookshelf, book or item not found
+        '500':
+          description: Internal server error
+    put:
+      tags:
+        - user
+      summary: Update the status of a book
+      description: Update the status of a book(reading, read, want-to-read)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: bookId
+          in: path
+          required: true
+          description: ID of the book
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01235"
+      requestBody:
+        description: status of book
+        content:
+          application/json:
+            schema:
+              type: string
+              enum:
+                - READING
+                - READ
+                - WANT-TO-READ
+        required: true
+      responses:
+        '200':
+          description: Status of book updated successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                enum:
+                  - READING
+                  - READ
+                  - WANT-TO-READ
+        '400':
+          description: Invalid user, bookshelf, or book id
+        '403':
+          description: User does not have access to update status of book
+        '404':
+          description: User, bookshelf, book or item not found
+        '500':
+          description: Internal server error
+
+
+  /user/{userId}/books/{bookId}/pages:
+    get:
+      tags:
+        - user
+      summary: Get the current page of a book
+      description: Returns the current page of a book
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: bookId
+          in: path
+          required: true
+          description: ID of the book
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01235"
+      responses:
+        '200':
+          description: Current page of book returned successfully
+          content:
+            application/json:
+              schema:
+                type: integer
+                example: 100
+        '400':
+          description: Invalid user, bookshelf, or book id
+        '404':
+          description: User, bookshelf, book or item not found
+        '500':
+          description: Internal server error
+    put:
+      tags:
+        - user
+      summary: Update the current page of a book
+      description: Update the current page of a book
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: bookId
+          in: path
+          required: true
+          description: ID of the book
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01235"
+      requestBody:
+        description: current page of book
+        content:
+          application/json:
+            schema:
+              type: integer
+              description: current page of book
+              example: 101
+        required: true
+      responses:
+        '200':
+          description: Current page of book updated successfully
+          content:
+            application/json:
+              schema:
+                type: integer
+                example: 101
+        '400':
+          description: Invalid user, bookshelf, book id or page number
+        '404':
+          description: User, bookshelf, book or item not found
+        '500':
+          description: Internal server error
+
+
+  /user/{userId}/bookshelves/{bookshelfId}/order:
+    get:
+      tags:
+        - user
+      summary: Get the books in a bookshelf in a specific order
+      description: Returns the books in a bookshelf in a specific order
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01235"
+        - name: order
+          in: query
+          required: true
+          description: order of the books
+          schema:
+            type: string
+            enum:
+              - TITLE
+              - AUTHOR
+              - PAGES
+      responses:
+        '200':
+          description: Retrieved books in order successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                description: array of shelf items in order.
+                items:
+                  $ref: '#/components/schemas/BookWrapper'
+        '400':
+          description: Invalid user, bookshelf, or book id.
+        '404':
+          description: User, bookshelf, book or item not found.
+        '500':
+          description: Internal server error.
+
+
+  /user/{userId}/bookshelves/{bookshelfId}/filter:
+    get:
+      tags:
+        - user
+      summary: Get the books in a bookshelf with a specific tag.
+      description: Returns the books in a bookshelf with a specific tag.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01235"
+        - name: tag_name
+          in: query
+          required: true
+          description: ID of the tag
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01236"
+      responses:
+        '200':
+          description: OK. Filtered books returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Array of book wrapper items with tag.
+                items:
+                  $ref: '#/components/schemas/BookWrapper'
+        '400':
+          description: Invalid user, bookshelf, or tag id.
+        '404':
+          description: User, bookshelf or tag not found.
+        '500':
+          description: Internal server error.
+
+  /user/{userId}/bookshelves/{bookshelfId}/category:
+    get:
+      tags:
+        - user
+      summary: Get the the category of this bookshelf
+      description: Get the category that this user has assigned to this bookshelf, if any
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+        - name: bookshelfId
+          in: path
+          required: true
+          description: ID of the bookshelf
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01235"
+      responses:
+        '200':
+          description: OK. Retrieved category successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        '204':
+          description: No category assigned.
+        '400':
+          description: Invalid user, bookshelf id.
+        '404':
+          description: User, bookshelf, book or item not found.
+        '403':
+          description: User is not the owner of the bookshelf
+        '500':
+          description: Internal server error.
+
+  /user/{userId}/insights/books_read:
+    get:
+      tags:
+        - user
+      summary: Get the number of books read.
+      description: Returns the number of books that have been marked as read for the user.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: The number of books read by the user.
+                type: integer
+                example: 40
+        '400':
+          description: Invalid request.
+        '404':
+          description: User not found.
+        '500':
+          description: Server error.
+
+
+  /user/{userId}/insights/preferred_genres:
+    get:
+      tags:
+        - user
+      summary: Get the preferred genres.
+      description: Returns an array with the top 3 preferred genres for the user.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: Array of names for the top 3 genres for this user.
+                items:
+                  type: string
+                example: [
+                  "SCIENCE",
+                  "MYSTERY",
+                  "HISTORY"
+                ]
+        '400':
+          description: Invalid request.
+        '404':
+          description: User not found.
+        '500':
+          description: Server error.
+
+
+  /user/{userId}/tags:
+    post:
+      tags:
+        - user
+      summary: Create a new tag.
+      description: Create a new tag to be added to the database.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the book.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      requestBody:
+        description: Tag name.
+        content:
+          application/json:
+            schema:
+              type: string
+              example: SCIENCE
+        required: true
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookTag"
+        '400':
+          description: Invalid request.
+        '404':
+          description: Bookshelf not found.
+        '500':
+          description: Internal server error.
+
+
+  /user:
+    post:
+      tags:
+        - user
+      summary: Create new user
+      description: Create a new user, this is done to keep everything in sync with the user microservice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              description: ID of the user.
+              type: string
+              format: uuid
+              example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Successful response.
+        '400':
+          description: Invalid request.
+        '500':
+          description: Internal server error.
+
+    delete:
+      tags:
+        - user
+      summary: Deletes a user
+      description: Deletes a user, all of things tied to the user such as shelves, statistics etc will be deleted.
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          description: ID of the user that needs to be deleted.
+          schema:
+            type: string
+            format: uuid
+            example: "b123e456-7890-1234-5678-9abcdef01234"
+      responses:
+        '200':
+          description: Successful response.
+        '400':
+          description: Invalid request.
+        '404':
+          description: User not found.
+        '500':
+          description: Internal server error.
+
+
+
+
+components:
+  schemas:
+    Book:
+      type: object
+      x-class-extra-annotation: "@javax.persistence.Entity @javax.persistence.Table(name=\"BOOK\") @lombok.NoArgsConstructor @lombok.AllArgsConstructor"
+      properties:
+        bookId:
+          type: string
+          format: uuid
+          description: The unique identifier of the book.
+          example: "b123e456-7890-1234-5678-9abcdef01234"
+          x-field-extra-annotation: "@javax.persistence.Id @javax.persistence.Column(name = \"id\")"
+        title:
+          type: string
+          description: The title of the book
+          example: The Adventures of Tom Sawyer
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"title\")"
+        authors:
+          type: array
+          items:
+            type: string
+          description: An array of author names.
+          example: [
+            Mark Twain,
+            John Doe,
+            Jane Doe
+          ]
+          x-field-extra-annotation: "@javax.persistence.ElementCollection @javax.persistence.CollectionTable(name = \"author_list\", joinColumns = @javax.persistence.JoinColumn(name = \"id\")) @javax.persistence.Column(name = \"authors\")"
+        genres:
+          type: array
+          items:
+            type: string
+            enum:
+              - BIOGRAPHY
+              - HISTORY
+              - SCIENCE
+              - CRIME
+              - POETRY
+              - MYSTERY
+              - SCIENCE_FICTION
+              - FANTASY
+              - ROMANCE
+              - HORROR
+              - DRAMA
+          description: An array of genres.
+          example: [
+            SCIENCE,
+            MYSTERY
+          ]
+          x-field-extra-annotation: "@javax.persistence.ElementCollection @javax.persistence.CollectionTable(name = \"genre_list\", joinColumns = @javax.persistence.JoinColumn(name = \"id\")) @javax.persistence.Column(name = \"genres\")"
+        description:
+          type: string
+          description: A brief description of the book.
+          example: A classic coming-of-age story about the adventures of Tom Sawyer in a small town along the Mississippi River.
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"description\")"
+        numPages:
+          type: integer
+          description: The number of pages in the book.
+          example: 275
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"num_pages\")"
+
+    Bookshelf:
+      type: object
+      x-class-extra-annotation: "@javax.persistence.Entity @javax.persistence.Table(name=\"BOOKSHELF\") @lombok.NoArgsConstructor @lombok.AllArgsConstructor"
+      properties:
+        bookshelfId:
+          type: string
+          format: uuid
+          description: The unique identifier of the bookshelf.
+          example: "b123e456-7890-1234-5678-9abcdef01234"
+          x-field-extra-annotation: "@javax.persistence.Id @javax.persistence.GeneratedValue(strategy = javax.persistence.GenerationType.AUTO) @javax.persistence.Column(name = \"id\")"
+        owner:
+          #type: object
+          x-field-extra-annotation: "@javax.persistence.ManyToOne(cascade = javax.persistence.CascadeType.PERSIST)"
+          allOf:
+            - $ref: '#/components/schemas/User'
+          #description: The unique identifier of the owner of the bookshelf.
+          #example: "b123e456-7890-1234-5678-9abcdef01235"
+        title:
+          type: string
+          description: The title of the bookshelf
+          example: My Bookshelf
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"title\")"
+        description:
+          type: string
+          description: A brief description of the bookshelf.
+          example: A bookshelf for all my favorite books
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"description\")"
+        books:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+          description: An array of books.
+          x-field-extra-annotation: "@javax.persistence.ManyToMany(cascade = javax.persistence.CascadeType.PERSIST)"
+        privacy:
+          type: string
+          enum:
+            - PUBLIC
+            - PRIVATE
+          description: The privacy of the bookshelf.
+          example: public
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"privacy\")"
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+          description: An array of members.
+          #            example: [
+          #              "b123e456-7890-1234-5678-9abcdef01234",
+          #              "b123e456-7890-1234-5678-9abcdef01235",
+          #              "b123e456-7890-1234-5678-9abcdef01236"
+          #            ]
+          x-field-extra-annotation: "@javax.persistence.ManyToMany(cascade = javax.persistence.CascadeType.PERSIST)"
+        pendingMembers:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+          description: An array of pending members.
+          #            example: [
+          #              "b123e456-7890-1234-5678-9abcdef01234",
+          #              "b123e456-7890-1234-5678-9abcdef01235",
+          #              "b123e456-7890-1234-5678-9abcdef01236"
+          #            ]
+          x-field-extra-annotation: "@javax.persistence.ManyToMany(cascade = javax.persistence.CascadeType.PERSIST)"
+
+    BookTag:
+      type: object
+      x-class-extra-annotation: "@javax.persistence.Entity @javax.persistence.Table(name=\"TAG\") @lombok.NoArgsConstructor @lombok.AllArgsConstructor"
+      properties:
+        tagId:
+          type: string
+          format: uuid
+          description: The unique identifier of the tag.
+          example: "b123e456-7890-1234-5678-9abcdef01234"
+          x-field-extra-annotation: "@javax.persistence.Id @javax.persistence.GeneratedValue(strategy = javax.persistence.GenerationType.AUTO) @javax.persistence.Column(name = \"id\")"
+        user:
+          #          type: string
+          #          format: uuid
+          #          description: The ID of the user who created this tag and who can use this tag.
+          #          example: "b123e456-7890-1234-5678-9abcdef01235"
+          x-field-extra-annotation: "@javax.persistence.ManyToOne(cascade = javax.persistence.CascadeType.PERSIST)"
+          allOf:
+            - $ref: '#/components/schemas/User'
+        name:
+          type: string
+          description: The name of the tag.
+          example: My Tag
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"name\")"
+
+    Category:
+      type: object
+      x-class-extra-annotation: "@javax.persistence.Entity @javax.persistence.Table(name=\"CATEGORY\") @lombok.NoArgsConstructor @lombok.AllArgsConstructor"
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+          description: The unique identifier of the bookshelf.
+          example: "b123e456-7890-1234-5678-9abcdef01234"
+          x-field-extra-annotation: "@javax.persistence.Id @javax.persistence.GeneratedValue(strategy = javax.persistence.GenerationType.AUTO) @javax.persistence.Column(name = \"id\")"
+        user:
+          #          type: string
+          #          format: uuid
+          #          description: The unique identifier of the user of the bookshelf.
+          #          example: "b123e456-7890-1234-5678-9abcdef01234"
+          x-field-extra-annotation: "@javax.persistence.ManyToOne(cascade = javax.persistence.CascadeType.PERSIST)"
+          allOf:
+            - $ref: '#/components/schemas/User'
+        bookshelves:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bookshelf'
+          description: The ids of the bookshelves this user has assigned this category to.
+          example: [
+            "b123e456-7890-1234-5678-9abcdef01234",
+            "b123e456-7890-1234-5678-9abcdef01235"
+          ]
+          x-field-extra-annotation: "@javax.persistence.OneToMany(cascade = javax.persistence.CascadeType.PERSIST)"
+        name:
+          type: string
+          description: The name of the category.
+          example: My Category
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"name\")"
+        description:
+          type: string
+          description: A brief description of the category.
+          example: A category for all my favorite books
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"description\")"
+
+    BookWrapper:
+      type: object
+      description: Each user can set unique properties per book (such as pages read, reading status, tags). This is a wrapper which encompasses the Book object for each user.
+      x-class-extra-annotation: "@javax.persistence.Entity @javax.persistence.Table(name=\"BOOKWRAPPER\") @javax.persistence.IdClass(nl.tudelft.sem.template.example.entities.BookWrapperId.class) @lombok.NoArgsConstructor @lombok.AllArgsConstructor"
+      properties:
+        bookId:
+          type: string
+          format: uuid
+          description: The unique identifier of the book.
+          example: "b123e456-7890-1234-5678-9abcdef01234"
+          x-field-extra-annotation: "@javax.persistence.Id @javax.persistence.Column(name = \"book_id\")"
+        userId:
+          type: string
+          format: uuid
+          description: The unique identifier of the user of the bookshelf.
+          example: "b123e456-7890-1234-5678-9abcdef01234"
+          x-field-extra-annotation: "@javax.persistence.Id @javax.persistence.Column(name = \"owner_id\")"
+        readingStatus:
+          type: string
+          enum:
+            - READING
+            - READ
+            - WANT-TO-READ
+          description: The reading status of the book
+          example: reading
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"reading_status\")"
+        currentPage:
+          type: integer
+          description: The current page of the book
+          example: 100
+          x-field-extra-annotation: "@javax.persistence.Column(name = \"current_page\")"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookTag"
+          #            type: string
+          #            format: uuid
+          #            description: An array of tag ids
+          #            example: [
+          #              "b123e456-7890-1234-5678-9abcdef01234",
+          #              "b123e456-7890-1234-5678-9abcdef01235"
+          #            ]
+          x-field-extra-annotation: "@javax.persistence.ManyToMany(cascade = javax.persistence.CascadeType.ALL)"
+
+    User:
+      type: object
+      description: Very basic user entity used for proper database relations.
+      x-class-extra-annotation: "@javax.persistence.Entity @javax.persistence.Table(name=\"USER\") @lombok.NoArgsConstructor @lombok.AllArgsConstructor"
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: The unique identifier of the user.
+          example: "b123e456-7890-1234-5678-9abcdef01234"
+          x-field-extra-annotation: "@javax.persistence.Id @javax.persistence.Column(name = \"id\")"
